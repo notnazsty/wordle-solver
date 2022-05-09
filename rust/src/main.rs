@@ -1,24 +1,14 @@
 use std::{collections::HashMap, fs, io, time::Instant};
 
-//Remove the memoization it takes up too much memory
+// Use threads to process multiple instances of Get_best_guess() concurrently.
 
 fn main() {
-    // let mut memoized_compare_guess: HashMap<String, Vec<String>> = HashMap::new();
-    // let start = Instant::now();
-    // println!(
-    //     "{}",
-    //     get_best_guess(&get_all_possible_words(), &mut memoized_compare_guess)
-    // );
-    // let duration = start.elapsed();
-    // println!("Took {:?}", duration);
-
+    // Enable to run some diagnostic tests
+    // compute_avg_tries_to_solve(); 
     run_game();
 }
 
 fn run_game() {
-    // For future implementation
-    let mut memoized_compare_guess: HashMap<String, Vec<String>> = HashMap::new();
-
     let mut word_list = get_all_possible_words();
     // *Precomputed* most performant word in terms of getting the most possible data
     let mut current_guess = String::from("tares");
@@ -46,7 +36,9 @@ fn run_game() {
         println!("{:?}", feedback);
         word_list = filter(&word_list, current_guess, &feedback);
         println!("List Size: {}", word_list.len());
-        current_guess = get_best_guess(&word_list, &mut memoized_compare_guess);
+        // print!("{:?}", word_list);
+        current_guess = get_best_guess(&word_list);
+        println!("current guess is {}", current_guess);
         counter += 1;
     }
 
@@ -56,20 +48,7 @@ fn run_game() {
     );
 }
 
-fn compare_guess(
-    guess: String,
-    word: String,
-    memoized_compare_guess: &mut HashMap<String, Vec<String>>,
-) -> Vec<String> {
-    let mut memoized_key: String = String::new();
-    memoized_key += &guess;
-    memoized_key += &word;
-
-    if memoized_compare_guess.contains_key(&memoized_key) {
-        println!("Memoised call lol");
-        return memoized_compare_guess.get(&memoized_key).unwrap().to_vec();
-    }
-
+fn compare_guess(guess: &String, word: String) -> Vec<String> {
     let mut response: Vec<String> = vec![
         String::from(""),
         String::from(""),
@@ -113,8 +92,6 @@ fn compare_guess(
         }
     }
 
-    memoized_compare_guess.insert(memoized_key, response.clone());
-
     return response;
 }
 
@@ -124,11 +101,14 @@ fn get_all_possible_words() -> Vec<String> {
     return word_list;
 }
 
-fn get_best_guess(
-    word_list: &Vec<String>,
-    memoized_compare_guess: &mut HashMap<String, Vec<String>>,
-) -> String {
+fn get_best_guess(word_list: &Vec<String>) -> String {
+    if word_list.len() == 1 {
+        return word_list.get(0).unwrap().to_owned();
+    }
+
     let mut buckets: HashMap<String, usize> = HashMap::new();
+
+    // println!("{}", word_list.len());
 
     for el in word_list.iter() {
         let assumed_correct = el;
@@ -137,12 +117,9 @@ fn get_best_guess(
         for el2 in word_list.iter() {
             let other_word = el2;
 
-            if (assumed_correct != other_word) {
-                let temp_score: Vec<String> = compare_guess(
-                    other_word.to_string(),
-                    assumed_correct.to_string(),
-                    memoized_compare_guess,
-                );
+            if assumed_correct != other_word {
+                let temp_score: Vec<String> =
+                    compare_guess(other_word, assumed_correct.to_string());
                 temp_diff_scores.push(temp_score);
             }
         }
@@ -160,7 +137,6 @@ fn get_best_guess(
             best_score = *temp_score;
         }
     }
-
     best_word
 }
 
@@ -170,28 +146,33 @@ fn filter(word_list: &Vec<String>, guess: String, feedback: &Vec<u8>) -> Vec<Str
         .into_iter()
         .filter(|word| -> bool {
             let mut yellow_pos: HashMap<char, usize> = HashMap::new();
+            let word_bytes = word.as_bytes();
 
-            for (i, el) in word.chars().enumerate() {
-                if feedback[i] == 0 && guess.chars().nth(i).unwrap() == el {
+            for (i, el) in guess.chars().enumerate() {
+                if feedback[i] == 0 && el == word_bytes[i] as char {
                     return false;
                 }
 
-                if feedback[i] == 2 && guess.chars().nth(i).unwrap() != el {
+                if feedback[i] == 2 && el != word_bytes[i] as char {
+                    return false;
+                }
+
+                if feedback[i] == 1 && el == word_bytes[i] as char {
                     return false;
                 }
 
                 if feedback[i] == 1 {
                     if yellow_pos.contains_key(&el) {
-                        yellow_pos.insert(el, yellow_pos.get(&el).unwrap() + 1);
+                        yellow_pos.insert(el, yellow_pos.get(&el).unwrap().to_owned() + 1);
                     } else {
                         yellow_pos.insert(el, 1);
                     }
                 }
             }
 
-            for (i, el) in yellow_pos.iter().enumerate() {
-                let count = word.chars().filter(|s| s.to_owned() == *el.0).count();
-                if (*el.1 > count) {
+            for el in yellow_pos.iter() {
+                let count = word.chars().filter(|c| c == el.0).count();
+                if el.1 > &count {
                     return false;
                 }
             }
@@ -212,4 +193,50 @@ fn process_guess_response(guess_resp: Vec<String>) -> Vec<u8> {
     }
 
     processed_resp
+}
+
+fn compute_avg_tries_to_solve() {
+    let mut avg_time: u128 = 0;
+    let mut avg_attempts: usize = 0;
+    let number_of_attempts: usize = 10;
+    let word_list = get_all_possible_words()[0..number_of_attempts].to_vec();
+    let mut counter = 0;
+
+    for el in word_list {
+        let mut inner_word_list = get_all_possible_words();
+        let mut current_guess = String::from("tares");
+        let mut attempts: usize = 0;
+        let mut feedback: Vec<u8> = Vec::new();
+        let start_time = Instant::now();
+        loop {
+            if feedback == vec![2u8, 2u8, 2u8, 2u8, 2u8] {
+                break;
+            }
+
+            feedback = process_guess_response(compare_guess(&current_guess, el.to_string()));
+            inner_word_list = filter(&inner_word_list, current_guess, &feedback);
+            current_guess = get_best_guess(&inner_word_list);
+            attempts += 1;
+
+            if attempts >=  10 || current_guess == String::from("") {
+                println!("Error handling attempt #{} word: {}", attempts,el.to_string());
+            }
+        }
+        let time_elapsed = start_time.elapsed().as_millis();
+        avg_time += time_elapsed;
+        avg_attempts += attempts;
+
+        counter += 1;
+
+        println!(
+            "Finished attempt #{} with {} tries, using {}ms",
+            counter, attempts, time_elapsed
+        );
+    }
+
+    avg_time = avg_time / number_of_attempts as u128;
+    avg_attempts = avg_attempts / number_of_attempts;
+
+    println!("Average time per word {}", avg_time);
+    println!("Average # of attempts per word {}", avg_attempts);
 }

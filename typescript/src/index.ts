@@ -77,7 +77,6 @@ export const filter = (words: string[], guess: string, feedback: string): string
 
 export const compareGuess = (guess: string, word: string): string => {
   if (memoizedCompareGuess[guess+word]) {
-    console.log("true")
     return memoizedCompareGuess[guess+ word];
   }
 

@@ -3,7 +3,16 @@ import readlineSync from "readline-sync";
 
 // console.log(compareGuess("tares", "stoma"));
 
-console.log(getBestGuess(getWordList()));
+// let wordList = getWordList();
+// let count = 0;
+
+// wordList = wordList.filter((val) => !val.includes("t")).filter((val) => !val.includes("a")).filter((val) => !val.includes("r")).filter((val) => val.includes("e")).filter((val) => val.includes("s"))
+
+// console.log(wordList.length)
+
+
+
+// console.log(getBestGuess(getWordList()));
 
 const words = ["death", "power", "spite", "alone"];
 
@@ -51,4 +60,4 @@ const runGame = () => {
   }
 };
 
-// runGame();
+runGame();
