@@ -1,7 +1,9 @@
 import { compareGuess, filter, getBestGuess, getWordList } from ".";
 import readlineSync from "readline-sync";
 
-// console.log(compareGuess("tares", "stoma"));
+console.log(compareGuess("title", "tares"));
+
+console.log(filter(getWordList(), "tares", "20102").length);
 
 // let wordList = getWordList();
 // let count = 0;
@@ -9,8 +11,6 @@ import readlineSync from "readline-sync";
 // wordList = wordList.filter((val) => !val.includes("t")).filter((val) => !val.includes("a")).filter((val) => !val.includes("r")).filter((val) => val.includes("e")).filter((val) => val.includes("s"))
 
 // console.log(wordList.length)
-
-
 
 // console.log(getBestGuess(getWordList()));
 
